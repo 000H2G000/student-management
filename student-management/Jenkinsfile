@@ -43,21 +43,23 @@ pipeline {
             }
         }
 
-        stage('Push to DockerHub') {
-            steps {
-                withCredentials([string(
-                    credentialsId: 'dockerhub-token',
-                    variable: 'DOCKER_TOKEN'
-                )]) {
-                    sh """
-                        echo "$DOCKER_TOKEN" | docker login -u "${DOCKERHUB_USER}" --password-stdin
-                        docker push ${FULL_IMAGE}
-                        docker push ${FULL_IMAGE_LATEST}
-                        docker logout
-                    """
-                }
+stage('Push to DockerHub') {
+    steps {
+        withCredentials([string(
+            credentialsId: 'dockerhub-token',
+            variable: 'DOCKER_TOKEN'
+        )]) {
+            retry(3) {
+                sh """
+                    echo "$DOCKER_TOKEN" | docker login -u "${DOCKERHUB_USER}" --password-stdin
+                    docker push ${FULL_IMAGE}
+                    docker push ${FULL_IMAGE_LATEST}
+                    docker logout
+                """
             }
         }
+    }
+}
 
         stage('Cleanup') {
             steps {
