@@ -1,0 +1,69 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER    = 'azizhadouchi'   // ← change this
+        IMAGE_NAME        = 'student-management'
+        IMAGE_TAG         = "${BUILD_NUMBER}"
+        FULL_IMAGE        = "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+        FULL_IMAGE_LATEST = "${DOCKERHUB_USER}/${IMAGE_NAME}:latest"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                withCredentials([string(
+                    credentialsId: 'github-token',
+                    variable: 'GH_TOKEN'
+                )]) {
+                    git(
+                        url: "https://${GH_TOKEN}@github.com/000H2G000/student-management.git",
+                        branch: 'master'
+                    )
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('student-management') {
+                    sh """
+                        docker build -t ${FULL_IMAGE} -t ${FULL_IMAGE_LATEST} .
+                    """
+                }
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([string(
+                    credentialsId: 'dockerhub-token',
+                    variable: 'DOCKER_TOKEN'
+                )]) {
+                    sh """
+                        echo "$DOCKER_TOKEN" | docker login -u "${DOCKERHUB_USER}" --password-stdin
+                        docker push ${FULL_IMAGE}
+                        docker push ${FULL_IMAGE_LATEST}
+                        docker logout
+                    """
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh "docker rmi ${FULL_IMAGE} ${FULL_IMAGE_LATEST} || true"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Successfully pushed: ${FULL_IMAGE}"
+        }
+        failure {
+            echo "❌ Pipeline failed!"
+        }
+    }
+}
