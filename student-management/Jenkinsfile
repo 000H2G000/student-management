@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER    = 'azizhadouchi'   // ← change this
+        DOCKERHUB_USER    = 'azizhadouchi'
         IMAGE_NAME        = 'student-management'
         IMAGE_TAG         = "${BUILD_NUMBER}"
         FULL_IMAGE        = "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -21,6 +21,14 @@ pipeline {
                         url: "https://${GH_TOKEN}@github.com/000H2G000/student-management.git",
                         branch: 'master'
                     )
+                }
+            }
+        }
+
+        stage('Build JAR') {
+            steps {
+                dir('student-management') {
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
